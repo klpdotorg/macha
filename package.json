@@ -1,0 +1,40 @@
+{
+  "name": "macha",
+  "version": "0.1",
+  "private": true,
+  "author": "KLP",
+  "keywords": [
+    "github",
+    "hubot",
+    "campfire",
+    "bot"
+  ],
+  "description": "A simple helpful bot",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/github/hubot/raw/master/LICENSE"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klpdotorg/macha.git"
+  },
+  "dependencies": {
+    "hubot": ">= 2.6.0 < 3.0.0",
+    "hubot-hipchat": "^2.6.4-2",
+    "hubot-scripts": ">= 2.5.0 < 3.0.0",
+    "githubot": "~1.0.0-beta2",
+    "scraper": "0.0.9",
+    "underscore": "~1.6.0",
+    "underscore.string": "~2.3.3",
+    "async": "~0.9.0",
+    "moment": "~2.6.0",
+    "contextify": "~0.1.8",
+    "coffee-script": "~1.7.1"
+  },
+  "engines": {
+    "node": ">= 0.8.x",
+    "npm": ">= 1.1.x"
+  }
+}
