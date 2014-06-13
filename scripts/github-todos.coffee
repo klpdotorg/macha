@@ -24,20 +24,18 @@
 #   hubot ask <user|everyone> to <text> #todos
 #   hubot assign <id> to <user> #todos
 #   hubot assign <user> to <id> #todos
-#   hubot finish <id> #todos
-#   hubot finish <id> <text> #todos
+#   hubot finish task <id> #todos
+#   hubot finish task <id> <text> #todos
+#   hubot reopen task <id> <text> #todos
 #   hubot i'll work on <id> #todos
-#   hubot move <id> to <done|current|upcoming|shelf> #todos
 #   hubot what am i working on #todos
 #   hubot what's <user|everyone> working on #todos
-#   hubot what's next #todos
-#   hubot what's next for <user|everyone> #todos
-#   hubot what's on <user|everyone>'s shelf #todos
-#   hubot what's on my shelf #todos
 #   hubot work on <id> #todos
 #   hubot work on <text> #todos
+#   hubot comment on task <id> #todos
 #   hubot show milestones #todos
-#   hubot show milestones for <repo> #todos
+#   hubot add milestone <id> to task <id> #todos
+#   hubot show issues in milestones <id> #todos
 #
 # License:
 #   MIT
@@ -134,21 +132,25 @@ class GithubTodosSender
     @github.withOptions(@optionsFor(msg)).post "repos/#{@primaryRepo}/issues", sendData, (data) =>
       msg.send @getIssueText(data, prefix: "Added: ")
 
-  moveIssue: (msg, issueId, newLabel, opts = {}) ->
-    @github.get "repos/#{@primaryRepo}/issues/#{issueId}", (data) =>
-      labelNames = _.pluck(data.labels, 'name')
-      labelNames = _.without(labelNames, 'done', 'trash', 'upcoming', 'shelf', 'current')
-      labelNames.push(newLabel.toLowerCase())
-
+  closeIssue: (msg, issueId, opts = {}) ->
       sendData =
-        state: if newLabel in ['done', 'trash'] then 'closed' else 'open'
-        labels: labelNames
+        state: 'closed'
 
-      log "Moving issue", sendData
+      log "Closing issue", sendData
 
       @github.withOptions(@optionsFor(msg)).patch "repos/#{@primaryRepo}/issues/#{issueId}", sendData, (data) =>
         if _.find(data.labels, ((l) -> l.name.toLowerCase() == newLabel.toLowerCase()))
-          msg.send @getIssueText(data, prefix: "Moved to #{newLabel.toLowerCase()}: ")
+          msg.send @getIssueText(data, prefix: "Closed issue: ")
+
+  reopenIssue: (msg, issueId, opts = {}) ->
+      sendData =
+        state: 'open'
+
+      log "Opening issue", sendData
+
+      @github.withOptions(@optionsFor(msg)).patch "repos/#{@primaryRepo}/issues/#{issueId}", sendData, (data) =>
+        if _.find(data.labels, ((l) -> l.name.toLowerCase() == newLabel.toLowerCase()))
+          msg.send @getIssueText(data, prefix: "Reopened issue: ")
 
   commentOnIssue: (msg, issueId, body, opts = {}) ->
     sendData =
@@ -251,35 +253,26 @@ module.exports = (robot) ->
   robot.respond /ask (\S+) to (.*)/i, (msg) ->
     robot.githubTodosSender.addIssue msg, msg.match[2], msg.match[1], footer: true
 
-  robot.respond /move\s(task\s)?\#?(\d+) to (\S+)/i, (msg) ->
-    robot.githubTodosSender.moveIssue msg, msg.match[2], msg.match[3]
+  robot.respond /comment on task (\d+) (.*)/i, (msg) ->
+    robot.githubTodosSender.commentOnIssue msg, msg.match[1], msg.match[2]
 
-  robot.respond /finish\s(task\s)?\#?(\d+)/i, (msg) ->
-    if (comment = msg.message.text.split(GithubTodosSender.ISSUE_BODY_SEPARATOR)[1])
-      robot.githubTodosSender.commentOnIssue msg, msg.match[2], doubleUnquote(_s.trim(comment))
+  robot.respond /finish task (\d+) (.*)/i, (msg) ->
+    if (comment = msg.match[2])
+      robot.githubTodosSender.commentOnIssue msg, msg.match[1], msg.match[2]
 
-    robot.githubTodosSender.moveIssue msg, msg.match[2], 'done'
+    robot.githubTodosSender.closeIssue msg, msg.match[1]
 
-  robot.respond /work on\s(task\s)?\#?(\d+)/i, (msg) ->
-    robot.githubTodosSender.moveIssue msg, msg.match[2], 'current'
+  robot.respond /reopen task (\d+) (.*)/i, (msg) ->
+    if (comment = msg.match[2])
+      robot.githubTodosSender.commentOnIssue msg, msg.match[1], msg.match[2]
+
+    robot.githubTodosSender.reopenIssue msg, msg.match[1], ''
 
   robot.respond /what am i working on\??/i, (msg) ->
-    robot.githubTodosSender.showIssues msg, msg.message.user.name, 'current'
+    robot.githubTodosSender.showIssues msg, msg.message.user.name, ''
 
   robot.respond /what(['|’]s|s|\sis) (\S+) working on\??/i, (msg) ->
-    robot.githubTodosSender.showIssues msg, msg.match[2], 'current'
-
-  robot.respond /what(['|’]s|s|\sis) next for (\S+)\??/i, (msg) ->
-    robot.githubTodosSender.showIssues msg, msg.match[2].replace('?', ''), 'upcoming'
-
-  robot.respond /what(['|’]s|s|\sis) next\??(\s*)$/i, (msg) ->
-    robot.githubTodosSender.showIssues msg, msg.message.user.name, 'upcoming'
-
-  robot.respond /what(['|’]s|s|\sis) on my shelf\??/i, (msg) ->
-    robot.githubTodosSender.showIssues msg, msg.message.user.name, 'shelf'
-
-  robot.respond /what(['|’]s|s|\sis) on (\S+) shelf\??/i, (msg) ->
-    robot.githubTodosSender.showIssues msg, msg.match[2].split('\'')[0], 'shelf'
+    robot.githubTodosSender.showIssues msg, msg.match[2], ''
 
   robot.respond /assign \#?(\d+) to (\S+)/i, (msg) ->
     robot.githubTodosSender.assignIssue msg, msg.match[1], msg.match[2]
@@ -289,9 +282,6 @@ module.exports = (robot) ->
 
   robot.respond /i(['|’]ll|ll) work on \#?(\d+)/i, (msg) ->
     robot.githubTodosSender.assignIssue msg, msg.match[2], msg.message.user.name
-
-  robot.respond /show milestones for (\S+)/i, (msg) ->
-    robot.githubTodosSender.showMilestones msg, msg.match[1]
 
   robot.respond /show milestones(\s*)$/i, (msg) ->
     robot.githubTodosSender.showMilestones msg, 'all'
