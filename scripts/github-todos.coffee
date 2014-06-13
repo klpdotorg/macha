@@ -18,6 +18,9 @@
 #
 # Commands:
 #   hubot add task <text> #todos
+
+#   hubot put task <id> in milestone <id>
+
 #   hubot ask <user|everyone> to <text> #todos
 #   hubot assign <id> to <user> #todos
 #   hubot assign <user> to <id> #todos
@@ -165,10 +168,20 @@ class GithubTodosSender
     @github.withOptions(@optionsFor(msg)).patch "repos/#{@primaryRepo}/issues/#{issueId}", sendData, (data) =>
       msg.send @getIssueText(data, prefix: "Assigned to #{data.assignee.login}: ")
 
-  showIssues: (msg, userName, label) ->
+  addIssueToMilestone: (msg, milestoneId, issueId, opts = {}) ->
+    sendData =
+      milestone: milestoneId
+
+    log "Adding issue to milestone", sendData
+
+    @github.withOptions(@optionsFor(msg)).patch "repos/#{@primaryRepo}/issues/#{issueId}", sendData, (data) =>
+      msg.send @getIssueText(data, prefix: "Added to #{data.milestone.url}: ")
+
+  showIssues: (msg, userName, label, opts = {}) ->
     queryParams =
       assignee: if userName.toLowerCase() == 'everyone' then '*' else @getGithubUser(userName)
-      labels: label
+      labels: label || ""
+      milestone: opts.milestoneId || "*"
 
     log "Showing issues", queryParams
 
@@ -226,6 +239,9 @@ class GithubTodosSender
 module.exports = (robot) ->
   robot.githubTodosSender = new GithubTodosSender(robot)
 
+  robot.respond /add milestone (\d+) to task (\d+)/i, (msg) ->
+    robot.githubTodosSender.addIssueToMilestone msg, msg.match[1], msg.match[2]
+
   robot.respond /add task (.*)/i, (msg) ->
     robot.githubTodosSender.addIssue msg, msg.match[1], msg.message.user.name
 
@@ -279,4 +295,7 @@ module.exports = (robot) ->
 
   robot.respond /show milestones(\s*)$/i, (msg) ->
     robot.githubTodosSender.showMilestones msg, 'all'
+
+  robot.respond /show issues in milestone (\d+)/i, (msg) ->
+    robot.githubTodosSender.showIssues msg, 'everyone', ''
 
