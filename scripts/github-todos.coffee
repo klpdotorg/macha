@@ -12,29 +12,26 @@
 #
 #   Individual users' oauth tokens are opt-in, but if you choose
 #   not to add them, you'll end up notifying yourself when you
-#   add a task.
+#   add a issue.
 #
 #   You'll need to create 'done', 'trash', 'upcoming', 'shelf', and 'current' labels.
 #
 # Commands:
-#   hubot add task <text> #todos
-
-#   hubot put task <id> in milestone <id>
-
+#   hubot add issue <text> #todos
+#   hubot put issue <id> in milestone <id>
 #   hubot ask <user|everyone> to <text> #todos
 #   hubot assign <id> to <user> #todos
 #   hubot assign <user> to <id> #todos
-#   hubot finish task <id> #todos
-#   hubot finish task <id> <text> #todos
-#   hubot reopen task <id> <text> #todos
+#   hubot finish <id> #todos
+#   hubot reopen <id> #todos
 #   hubot i'll work on <id> #todos
 #   hubot what am i working on #todos
-#   hubot what's <user|everyone> working on #todos
+#   hubot what is <user|everyone> working on #todos
 #   hubot work on <id> #todos
 #   hubot work on <text> #todos
-#   hubot comment on task <id> #todos
+#   hubot comment on issue <id> <text> #todos
 #   hubot show milestones #todos
-#   hubot add milestone <id> to task <id> #todos
+#   hubot add milestone <id> to issue <id> #todos
 #   hubot show issues in milestones <id> #todos
 #
 # License:
@@ -241,10 +238,10 @@ class GithubTodosSender
 module.exports = (robot) ->
   robot.githubTodosSender = new GithubTodosSender(robot)
 
-  robot.respond /add milestone (\d+) to task (\d+)/i, (msg) ->
+  robot.respond /add milestone (\d+) to issue (\d+)/i, (msg) ->
     robot.githubTodosSender.addIssueToMilestone msg, msg.match[1], msg.match[2]
 
-  robot.respond /add task (.*)/i, (msg) ->
+  robot.respond /add issue (.*)/i, (msg) ->
     robot.githubTodosSender.addIssue msg, msg.match[1], msg.message.user.name
 
   robot.respond /work on ([A-Z\'\"][\s\S\d]+)/i, (msg) ->
@@ -253,16 +250,16 @@ module.exports = (robot) ->
   robot.respond /ask (\S+) to (.*)/i, (msg) ->
     robot.githubTodosSender.addIssue msg, msg.match[2], msg.match[1], footer: true
 
-  robot.respond /comment on task (\d+) (.*)/i, (msg) ->
+  robot.respond /comment on issue (\d+) (.*)/i, (msg) ->
     robot.githubTodosSender.commentOnIssue msg, msg.match[1], msg.match[2]
 
-  robot.respond /finish task (\d+) (.*)/i, (msg) ->
+  robot.respond /finish (\d+)/i, (msg) ->
     if (comment = msg.match[2])
       robot.githubTodosSender.commentOnIssue msg, msg.match[1], msg.match[2]
 
     robot.githubTodosSender.closeIssue msg, msg.match[1]
 
-  robot.respond /reopen task (\d+) (.*)/i, (msg) ->
+  robot.respond /reopen (\d+)/i, (msg) ->
     if (comment = msg.match[2])
       robot.githubTodosSender.commentOnIssue msg, msg.match[1], msg.match[2]
 
@@ -289,3 +286,11 @@ module.exports = (robot) ->
   robot.respond /show issues in milestone (\d+)/i, (msg) ->
     robot.githubTodosSender.showIssues msg, 'everyone', ''
 
+  robot.respond /thank you(.*)/i, (msg) ->
+    msg.send "You're welcome"
+
+  robot.hear /hipster/i, (msg) ->
+    msg.send "(hipster)"
+
+  robot.respond /(do|kill|make|create|destroy) (.*)/. (msg) ->
+    msg.send "I can't #{msg.match[1]}"
