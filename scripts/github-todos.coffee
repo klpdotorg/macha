@@ -292,8 +292,8 @@ module.exports = (robot) ->
   robot.hear /hipster/i, (msg) ->
     msg.send "(hipster)"
 
-  robot.respond /(do|kill|make|create|destroy) (.*)/i. (msg) ->
+  robot.respond /(do|kill|make|create|destroy) (.*)/i, (msg) ->
     msg.send "I can't #{msg.match[1]}"
 
-  robot.respond /\b(dance|rejoice) (.*)/i. (msg) ->
+  robot.respond /\b(dance|rejoice) (.*)/i, (msg) ->
     msg.send "(dance)"
